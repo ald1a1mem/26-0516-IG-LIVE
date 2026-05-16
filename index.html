@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="icon.png">
+<title>2026 0516 ALD1 IG 直播</title>
+
+<style>
+body { background: #111; color: white; text-align: center; font-family: sans-serif; margin: 0; overflow-x: hidden; }
+:root { --main-color: #5698c3; }
+#title { font-size: 26px; margin: 20px auto; font-weight: bold; line-height: 1.5; max-width: 95%; }
+#top-controls { margin-bottom: 15px; }
+#subtitle-controls { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
+#subtitle-controls button { background: var(--main-color); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; transition: 0.3s; font-weight: bold; }
+#subtitle-controls button:hover { filter: brightness(1.2); }
+#video-wrapper { width: 100%; display: flex; flex-direction: column; align-items: center; }
+#video-container { position: relative; width: min(95vw, 640px); aspect-ratio: 16 / 9; background: black; border-radius: 10px; overflow: hidden; }
+#player, #player iframe { width: 100%; height: 100%; display: block; }
+#subtitle { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); font-size: 18px; font-family: "Arial Rounded MT Bold", "微軟正黑體", sans-serif; color: white; background: rgba(0,0,0,0.7); padding: 8px 14px; border-radius: 8px; white-space: pre-line; max-width: 90%; width: fit-content; pointer-events: none; z-index: 10; line-height: 1.5; display: none; }
+#exitFsBtn { display: none; position: absolute; right: 20px; bottom: 20px; background: var(--main-color); color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold; z-index: 20; }
+#bottom-bar { margin-top: 15px; margin-bottom: 25px; }
+#fullscreenBtn { background: var(--main-color); color: white; border: none; padding: 10px 30px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+#fullscreenBtn:hover { filter: brightness(1.2); }
+#video-container:fullscreen { width: 100vw; height: 100vh; border-radius: 0; }
+#video-container:fullscreen #player, #video-container:fullscreen iframe { width: 100vw; height: 100vh; }
+#video-container:fullscreen #subtitle { font-size: 4vh; bottom: 8vh; }
+#video-container:fullscreen #exitFsBtn { display: block; }
+
+@media (max-width: 768px) {
+  #title { font-size: 18px; padding: 0 15px; margin-top: 18px; margin-bottom: 18px; }
+  #video-container { width: 100vw; border-radius: 0; }
+  #subtitle { font-size: 15px; bottom: 14px; max-width: 92%; padding: 6px 10px; }
+  #subtitle-controls button, #fullscreenBtn { font-size: 14px; padding: 8px 14px; }
+}
+</style>
+</head>
+
+<body>
+
+<div id="title">
+2026 0516 ALD1 IG 直播
+</div>
+
+<div id="top-controls">
+  <div id="subtitle-controls">
+    <button onclick="changeFontSize(2)">放大</button>
+    <button onclick="changeFontSize(-2)">縮小</button>
+    <button onclick="resetFontSize()">復原</button>
+  </div>
+</div>
+
+<div id="video-wrapper">
+  <div id="video-container">
+    <div id="player"></div>
+    <div id="subtitle">字幕載入中...</div>
+    <button id="exitFsBtn" onclick="exitFullScreen()">退出全螢幕</button>
+  </div>
+  <div id="bottom-bar">
+    <button id="fullscreenBtn" onclick="enterFullScreen()">全螢幕</button>
+  </div>
+</div>
+
+<script>
+// 1. 定義變數
+const videoId = "geTeNtqOYc8";
+let player = null;
+
+// 2. 字幕清單 (已修正原本 299 秒處的語法錯誤)
+const subtitles = [
+  { time: 1,  text: "SANGHYEON | 成功了 成功了 成功了 成功了 成功了" },
+  { time: 4,  text: "JUNSEO | 畫面清楚嗎？" },
+  { time: 6,  text: "SANGHYEON | 耶~\nJUNSEO | 嗚~\nANXIN | 嗨~" },
+  { time: 9,  text: "SANGHYEON | 哈囉 大家" },
+  { time: 11,  text: "XINLONG | 耶~" },
+  { time: 15,  text: "LEO | 來，我們要不要再稍微等個 10 秒鐘？\nJUNSEO | 好 OK" },
+  { time: 17,  text: "JUNSEO | 那在我們的粉絲 ALLYZ們進來之前..." },
+  { time: 20,  text: "ANXIN | 哈囉！嗨！大家好" },
+  { time: 22,  text: "XINLONG | 嗨~\nJUNSEO | 你好" },
+  { time: 24,  text: "SANGHYEON | 嗨~" },
+  { time: 25,  text: "JUNSEO | 那要不要先來個帥氣的團體問候再開始呢？" },
+  { time: 27,  text: "JUNSEO | 那要不要先來個帥氣的團體問候再開始呢？\nLEO | 耶~ ARNO | 耶！\nSANGHYEON | YES" },
+  { time: 29,  text: "LEO | 向大家問好 ONE DESTINY " },
+  { time: 30,  text: "ALD1 | DRIVE TO THE TOP " },
+  { time: 31,  endTime: 35, text: "ALD1 | 大家好 我們是 ALPHA DRIVE ONE " },
+  { time: 39,  text: "JUNSEO | 今天我們遇到了非常令人高興的事 " },
+  { time: 40,  text: "JUNSEO | 就像這樣\nSANGHYEON | YES " },
+  { time: 42,  endTime: 43, text: "JUNSEO | 是的 我們竟然拿到了兩個獎！ " },
+  { time: 45,  text: "JUNSEO | 我們 ANXIN 好像很久都沒有喊了\n來喊一下 ALPHA DRIVE ONE LET'S GO " },
+  { time: 47,  text: "ANXIN | OK！三 二 一 ALPHA DRIVE ONE " },
+  { time: 49,  text: "ALD1 | LET'S GO " },
+  { time: 52,  text: "ANXIN | OKAY " },
+  { time: 53,  text: "JUNSEO | 哇~ 太棒了 " },
+  { time: 54,  text: "LEO | 就像這樣，我們在 ASEA 居然拿到了兩個獎" },
+  { time: 58,  text: "LEO | 其實我們光是能參加這個典禮就已經非常感謝了 " },
+  { time: 62,  text: "LEO | 居然還給了我們兩個獎 " },
+  { time: 64,  text: "LEO | 對 其實這都是多虧了 ALLYZ們" },
+  { time: 66,  text: "JUNSEO、ANXIN | 沒錯" },
+  { time: 67,  text: "LEO | 所以為了想要紀念這個" },
+  { time: 68,  text: "LEO | 這段如此幸福的瞬間，我們才稍微開了直播來找大家" },
+  { time: 72,  text: "SANGWON | 謝謝大家" },
+  { time: 73,  text: "XINLONG、JUNSEO | 謝謝大家" },
+  { time: 75,  text: "JUNSEO | 今天大家也有好好看我們的舞台嗎" },
+  { time: 77,  text: "LEO、SANGHYEON | 耶~" },
+  { time: 78,  text: "JUNSEO | 我們今天又非常帥氣地準備了 Intro 開場表演\nLEO | 對 ANXIN | 沒錯！" },
+  { time: 81,  text: "JUNSEO | 沒錯！今天 XINLONG 跟 ARNO 又非常帥氣地跳了一段舞" },
+  { time: 84,  text: "ANXIN | Dance Break" },
+  { time: 85,  text: "JUNSEO | ANXIN ANXIN 很喜歡 ALPHA DRIVE ONE" },
+  { time: 90,  text: "JUNSEO | 就像這樣帥氣地出場，並以這段表演拉開了序幕" },
+  { time: 94,  text: "SANGWON | 謝謝大家" },
+  { time: 95,  text: "LEO | '真的很愛你們 孩子們'\n謝謝大家" },
+  { time: 97,  text: "ANXIN | 我們也很愛大家" },
+  { time: 99,  text: "SANGWON | 我們會更努力的" },
+  { time: 100,  text: "JUNSEO | 粉絲留言說'我們拿得很好呢'" },
+  { time: 104,  text: "ARNO | 恭喜你們 孩子們" },
+  { time: 106,  text: "ANXN | 喔！恭喜你們 孩子們" },
+  { time: 107,  text: "SANGHYEON | 恭喜！" },
+  { time: 109,  text: "ANXIN | 恭喜！" },
+  { time: 110,  text: "SANGHYEON | 恭喜！\nANXIN | 恭喜！" },
+  { time: 112,  text: "LEO | 哎呀 謝謝大家" },
+  { time: 114,  endTime: 115, text: "LEO | 哇嗚！" },
+  { time: 116, text: "LEO | 其實我們覺得今天的表演場地氣氛也非常好" },
+  { time: 121, text: "LEO | 總覺得光是看著這一個舞台" },
+  { time: 125, text: "LEO | 能夠看到這麼多其他不同且多樣的藝人們、前輩們的舞台" },
+  { time: 130, text: "LEO | 讓我們學到了非常多" },
+  { time: 131, text: "LEO | 感覺真的是一個讓人非常非常感謝的場合" },
+  { time: 134, text: "JUNSEO | 沒錯" },
+  { time: 136, text: "LEO | 能一起參與其中真的很榮幸" },
+  { time: 137, text: "JUNSEO | 真的\nSANGHYEON | YES" },
+  { time: 139, text: "LEO | 好 'SANGHYEON 撒嬌三連發'，出發\n(ARNO 震驚)" },
+  { time: 143, text: "SEO、ARNO、LEO、WON、LONG、XIN | 一" },
+  { time: 144, text: "SEO、ARNO、LEO、WON、LONG、XIN | 二" },
+  { time: 145, text: "SEO、ARNO、LEO、WON、LONG、XIN | 三" },
+  { time: 148, text: "JUNSEO | 真可愛呢" },
+  { time: 149, text: "LEO | '祝賀獲得新人獎' 謝謝大家" },
+  { time: 152, text: "SANGHYEON | 你是最棒的藝人" },
+  { time: 153, text: "LEO | 'SANGWON 撒嬌'" },
+  { time: 155, endTime: 157,text: "SANGWON | 真的嗎\nLEO | 只要 20 秒就好" },
+  { time: 158, endTime: 157,text: "SANGWON | OKAY\nARNO | OKAY！\n喔~" },
+  { time: 158, text: "SANGWON | OKAY\nARNO | OKAY！\n喔~" },
+  { time: 160, text: "SEO、ARNO、LONG、XIN、HYEON | 喔！\nLEO | 喔！撒嬌？" },
+  { time: 161, text: "LEO | 不行！不行！不行！\nSANGHYEON | 欸！欸？欸！\nJUNSEO | 等 等 等一下" },
+  { time: 164, text: "JUNSEO | 不是，明明是撒嬌，怎麼突然變這樣？" },
+  { time: 166, endTime: 167,text: "ARNO | 頭不見了" },
+  { time: 168, text: "SANGHYEON | 快點 快點 啊等一下，一半、一半、一半就好 OKAY" },
+  { time: 173, text: "JUNSEO | 我們大家都要只看身體了" },
+  { time: 174, text: "SANGWON | 《누난 너무 예뻐》(姐姐真漂亮)" },
+  { time: 176, text: "SANGHYEON | 喔？可以唱、可以唱" },
+  { time: 178, text: "SEO、WON、HYEON | ♫누난 너무 예뻐~♫" },
+  { time: 183, endTime: 187, text: "SANGHYEON | 沒有頭髮的姐姐太美了\nSANGWON | ♫Replay, Replay, Replay~♫" },
+  { time: 189, text: "JUNSEO | 連慶祝儀式都有，連舞都跳了" },
+  { time: 191, text: "ANXIN | 連舞都跳了" },
+  { time: 192, text: "JUNSEO | 我們今天" },
+  { time: 194, text: "JUNSEO | 獲得了「最佳新人獎」" },
+  { time: 196, text: "JUNSEO | 以及「年度白金藝人獎」" },
+  { time: 198, text: "JUNSEO | 拿到了這個白金獎，像這樣成為了雙冠王，真的非常感謝" },
+  { time: 201, text: "JUNSEO | 另外也不能不聽聽成員們各自的感想" },
+  { time: 205, text: "JUNSEO | 那就先從 SANGHYEON 開始" },
+  { time: 206, text: "JUNSEO | 對 ALLYZ們說一下感謝的問候 大概說一下就好\nSANGHYEON | 好的" },
+  { time: 210, text: "SANGHYEON | 首先我們自從開始以 ALPHA DRIVE ONE 的身份活動以來" },
+  { time: 216, text: "SANGHYEON | 就一直說一定要拿到新人獎" },
+  { time: 218, text: "SANGHYEON | 我想包括哥哥們和我自己，大家應該都至少提過一次" },
+  { time: 222, text: "SANGHYEON | 這次能在 ASEA 拿到新人獎，真的感到非常非常幸福" },
+  { time: 226, text: "SANGHYEON | 現在" },
+  { time: 227, text: "SANGHYEON | 本來就已經非常幸福了" },
+  { time: 229, text: "SANGHYEON | 結果回來之後居然還拿到了「年度白金藝人獎」" },
+  { time: 232, text: "SANGHYEON | 更加更加倍地感到幸福 真的非常感謝大家" },
+  { time: 235, text: "SANGHYEON | 我也下定決心以後要更努力地活動" },
+  { time: 237, text: "SANGHYEON | 各位 我真的很愛你們" },
+  { time: 238, text: "JUNSEO | 啊~\nLEO | 哇嗚" },
+  { time: 240, text: "JUNSEO | 很好。接下來是 XINLONG" },
+  { time: 242, text: "XINLONG | 我們今天拿到了兩種獎項" },
+  { time: 244, text: "XINLONG | 連新人獎也拿到了，真的非常心動" },
+  { time: 248, text: "XINLONG | 也非常高興" },
+  { time: 250, text: "XINLONG | 我們以後也會一直保持著新人的初心，隨時努力展現活躍的表現" },
+  { time: 255, text: "XINLONG | 多虧了 ALLYZ各位，我們才能拿到這麼大的獎" },
+  { time: 259, text: "XINLONG | 喔...以後我們也會繼續努力" },
+  { time: 260, endTime: 262, text: "XINLONG | 我愛你們 ALLYZ！\n JUNSEO、ARNO | YEAH~" },
+  { time: 263, endTime: 264, text: "LEO | 愛你" },
+  { time: 264, text: "ARNO | 接下來用中文 用中文說" },
+  { time: 267, text: "ARNO | 額...今天我們" },
+  { time: 268, text: "ARNO | 非常不容易能拿到這兩個獎項" },
+  { time: 270, text: "ARNO | 然後這兩個獎項都是託了ALLYZ的福" },
+  { time: 273, text: "ARNO | 然後以後" },
+  { time: 275, text: "ARNO | 非常 非常感謝我們現在還有很多的不足" },
+  { time: 278, text: "ARNO | 但是 你們也沒有無條件的一直在支持我們" },
+  { time: 284, text: "ARNO | 所以 非常榮幸 以後也會一直戴著這份力量走道更高的地方 然後" },
+  { time: 288, text: "ARNO | 報答你們的" },
+  { time: 289, text: "XINLONG | 好的" },
+  { time: 290, text: "ARNO | 在更高的地方" },
+  { time: 292, endTime: 294,  text: "ARNO | 就拜託大家了" },
+  { time: 295, text: "ARNO、XINLONG | 謝謝" },
+  { time: 296, text: "JUNSEO | 謝謝大家" },
+  { time: 297, text: "JUNSEO | 啊 首先今天發生了這樣令人難以置信 如此幸福的事" },
+  { time: 301, text: "JUNSEO | 感覺會讓我非常非常深刻地記在心裡" },
+  { time: 304, text: "JUNSEO | 因為這都是多虧了我們 ALLYZ" },
+  { time: 307, text: "JUNSEO | 以後我們真的會抱著感恩的心，努力只展現帥氣的面貌並積極活動" },
+  { time: 312, text: "JUNSEO | 今天也來看我們的舞台，並這樣守護我們到最後，真的由衷感謝大家。我愛你們！" },
+  { time: 317, text: "ARNO、SANGHYEON | 耶~\nLEO | 我愛你們" },
+  { time: 320, text: "LEO | 安信" },
+  { time: 321, text: "ANXIN | 我呢" },
+  { time: 323, text: "ANXIN | 首先，我今天也覺得非常 說實話" },
+  { time: 326, text: "ANXIN | 現在還是不敢置信" },
+  { time: 327, text: "ANXIN | 啊，真的嗎" },
+  { time: 328, text: "SANGHYEON | 不敢置信？" },
+  { time: 330, text: "ANXIN | 我們真的、真的拿到新人獎了" },
+  { time: 333, text: "ANXIN | 非常高興 也非常心動" },
+  { time: 335, text: "ANXIN | 儘管如此 還是非常感謝 ALLYZ" },
+  { time: 338, text: "ANXIN | 啊 非常感謝大家 然後" },
+  { time: 340, text: "ANXIN | 因為有大家 所以我才能" },
+  { time: 342, text: "ANXIN | 獲得今天這個新人獎" },
+  { time: 344, text: "ANXIN | 然後也希望大家以後能夠接下去" },
+  { time: 345, text: "ANXIN | 繼續支持我們" },
+  { time: 346, text: "ANXIN | 然後我們再來 接下來" },
+  { time: 348, endTime: 351, text: "ANXIN | 我們馬上就要回歸了 也希望大家繼續支持我們新的回歸" },
+  { time: 352, endTime: 353, text: "ANXIN | 謝謝大家" },
+  { time: 354, text: "ANXIN | 我們馬上就要回歸了嘛" },
+  { time: 355, text: "JUNSEO | 沒錯 沒錯" },
+  { time: 356, text: "ARNO | No School Tomorrow" },
+  { time: 357, endTime: 359,  text: "JUNSEO | 沒錯\nLEO | 即將到來\nSANGHYEON | YES" },
+  { time: 361, text: "SANGHYEON | LET'S GO" },
+  { time: 362, text: "SANGWON | 呃" },
+  { time: 363, text: "SANGWON | 請大家多多期待，我們的 OMG 馬上就要出來了" },
+  { time: 368, text: "SANGWON | 如果大家能喜歡" },
+  { time: 370, text: "SANGWON | 如果你們能喜歡的話，我們會非常感謝" },
+  { time: 371, text: "SANGWON | 呃" },
+  { time: 373, text: "SANGWON | 讓我們一起快樂地進行活動吧" },
+  { time: 374, text: "SANGWON | 這次的數位單曲" },
+  { time: 377, text: "SANGWON | 而且我們以後也會推出很多好的音樂" },
+  { time: 380, endTime: 384, text: "SANGWON | 請大家多多期待，我們會更努力的" },
+  { time: 388, text: "LEO | 好 現在 呃" },
+  { time: 389, text: "LEO | 非常非常感謝今天送給我們這兩個、兩個帥氣的獎、兩個珍貴的獎作為禮物" },
+  { time: 395, text: "LEO | 我們以後會成為更加努力的 ALPHA DRIVE ONE\nSANGHYEON | YES" },
+  { time: 399, text: "SANGHYEON | 'LEO 請用英文說幾句'\nLEO | 喔 好的" },
+  { time: 400, text: "LEO | 對" },
+  { time: 402, text: "LEO | To all our international ALLYZ\n給我們所有國際上的 ALLYZ" },
+  { time: 404, text: "LEO | thank you guys so much for giving us these two awards\n非常感謝你們大家給了我們這兩個獎" },
+  { time: 407, text: "LEO | we know how much of a big of an impact you guys have had on this outcome \n我們知道你們大家對這個結果帶來了多麼巨大的影響" },
+  { time: 411, text: "LEO | so we want to thank you guys so much \n所以我們想對你們說聲非常感謝" },
+  { time: 413, text: "LEO | It would never happen without you guys, so we love you guys so much\n沒有你們，這一切絕不可能發生，所以我們超級愛你們" },
+  { time: 417, text: "LEO | And we're coming back on the 26th of May, so\n還有我們即將在 5 月 26 日回歸 所以" },
+  { time: 419, text: "LEO | Let's go\n出發！ JUNSEO | Let's go\n出發！" },
+  { time: 422, text: "LEO | 準備好了嗎？" },
+  { time: 422, text: "SEO、XIN、HYEON | 準備好了" },
+  { time: 424, text: "JUNSEO | 我準備好了" },
+  { time: 425, text: "LEO | 好的，那我們最後來跟大家打個招呼吧" },
+  { time: 426, text: "JUNSEO | 好的 那在做最後的問候之前，我們來比個愛心吧" },
+  { time: 429, text: "SANGWON | OKAY！\nLEO | 好啊 好啊" },
+  { time: 430, text: "SANGHYEON | OK" },
+  { time: 432, text: "SANGWON | ありがとうございます\n謝謝大家" },
+  { time: 434, text: "JUNSEO | 好的 二，三" },
+  { time: 435, text: "ALD1 | ありがとうございます\n謝謝大家" },
+  { time: 438, text: "JUNSEO | 謝謝大家！" },
+  { time: 439, text: "XINLONG | 謝謝大家！\nSANGYEON | Thank you!" },
+  { time: 440, text: "SANGYEON | 謝謝 拜拜 我愛你\nXINLONG | I LOVE YOU" },
+  { time: 441, text: "SANGYEON | I LOVE YOU\nXINLONG | 謝謝" },
+  { time: 442, text: "SANGYEON | 我愛你\nXINLONG | 辛苦了" },
+  { time: 443, text: "XINLONG | 辛苦了\nSANGWON | 結束！" },
+];
+
+// 3. 載入 YouTube API
+var tag = document.createElement('script');
+tag.src = "https://www.youtube.com/iframe_api";
+var firstScriptTag = document.getElementsByTagName('script')[0];
+firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+function onYouTubeIframeAPIReady() {
+  player = new YT.Player("player", {
+    height: "360",
+    width: "640",
+    videoId: videoId,
+    playerVars: {
+      'autoplay': 0,
+      'controls': 1,
+      'rel': 0,
+      'modestbranding': 1,
+      'origin': window.location.origin
+    },
+    events: {
+      'onReady': onPlayerReady,
+      'onError': onPlayerError
+    }
+  });
+}
+
+function onPlayerReady(event) {
+  setInterval(updateSubtitle, 200);
+}
+
+function onPlayerError(e) {
+  console.error("播放器出錯，代碼：" + e.data);
+}
+
+// 4. 字幕更新邏輯
+function updateSubtitle(){
+  if(!player || !player.getCurrentTime || typeof player.getCurrentTime !== 'function') return;
+
+  const t = player.getCurrentTime();
+  let text = "";
+
+  for(let i = subtitles.length - 1; i >= 0; i--){
+    const sub = subtitles[i];
+    if(t >= sub.time){
+      if(sub.endTime && t >= sub.endTime) {
+        text = ""; 
+      } else {
+        text = sub.text;
+      }
+      break; 
+    }
+  }
+
+  const subEl = document.getElementById("subtitle");
+  if(text === "") {
+    subEl.style.display = "none";
+  } else {
+    subEl.style.display = "block";
+    subEl.innerText = text;
+  }
+}
+
+// 5. 控制功能
+let currentFontSize = 18;
+function changeFontSize(delta) {
+  currentFontSize += delta;
+  document.getElementById("subtitle").style.fontSize = currentFontSize + "px";
+}
+function resetFontSize() {
+  currentFontSize = 18;
+  document.getElementById("subtitle").style.fontSize = "18px";
+}
+
+function enterFullScreen() {
+  const elem = document.getElementById("video-container");
+  if (elem.requestFullscreen) { elem.requestFullscreen(); }
+  else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); }
+  else if (elem.msRequestFullscreen) { elem.msRequestFullscreen(); }
+}
+
+function exitFullScreen() {
+  if (document.exitFullscreen) { document.exitFullscreen(); }
+  else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); }
+  else if (document.msExitFullscreen) { document.msExitFullscreen(); }
+}
+
+document.addEventListener('fullscreenchange', () => {
+  const subEl = document.getElementById("subtitle");
+  if (document.fullscreenElement) {
+    subEl.style.fontSize = (currentFontSize * 1.5) + "px";
+  } else {
+    subEl.style.fontSize = currentFontSize + "px";
+  }
+});
+</script>
+
+</body>
+</html>
